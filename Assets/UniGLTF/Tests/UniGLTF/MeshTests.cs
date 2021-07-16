@@ -134,7 +134,7 @@ namespace UniGLTF
             };
             var axisInverter = Axes.X.Create();
 
-            var unityMesh = MeshExportInfo.Create(go);
+            var unityMesh = MeshExportList.Create(go);
             var (gltfMesh, blendShapeIndexMap) = meshExportSettings.DivideVertexBuffer
                 ? MeshExporter_DividedVertexBuffer.Export(glTF, bufferIndex, unityMesh, Materials, axisInverter, meshExportSettings)
                 : MeshExporter_SharedVertexBuffer.Export(glTF, bufferIndex, unityMesh, Materials,axisInverter, meshExportSettings)
@@ -182,7 +182,7 @@ namespace UniGLTF
             };
             var axisInverter = Axes.X.Create();
 
-            var unityMesh = MeshExportInfo.Create(go);
+            var unityMesh = MeshExportList.Create(go);
             var (gltfMesh, blendShapeIndexMap) = meshExportSettings.DivideVertexBuffer
                 ? MeshExporter_DividedVertexBuffer.Export(glTF, bufferIndex, unityMesh, Materials, axisInverter, meshExportSettings)
                 : MeshExporter_SharedVertexBuffer.Export(glTF, bufferIndex, unityMesh, Materials,axisInverter, meshExportSettings)

@@ -142,7 +142,7 @@ namespace UniGLTF
         }
 
         #region Export
-        static glTFNode ExportNode(Transform x, List<Transform> nodes, List<MeshExportInfo> meshWithRenderers, List<SkinnedMeshRenderer> skins)
+        static glTFNode ExportNode(Transform x, List<Transform> nodes, IReadOnlyList<MeshExportInfo> meshWithRenderers, List<SkinnedMeshRenderer> skins)
         {
             var node = new glTFNode
             {
@@ -231,11 +231,11 @@ namespace UniGLTF
                 .Skip(1) // exclude root object for the symmetry with the importer
                 .ToList();
 
-            var uniqueUnityMeshes = new List<MeshExportInfo>();
-            MeshExportInfo.GetInfo(Nodes, uniqueUnityMeshes, meshExportSettings);
+            var uniqueUnityMeshes = new MeshExportList();
+            uniqueUnityMeshes.GetInfo(Nodes, meshExportSettings);
 
             #region Materials and Textures
-            Materials = uniqueUnityMeshes.SelectMany(x => x.Materials).Where(x => x != null).Distinct().ToList();
+            Materials = uniqueUnityMeshes.GetUniqueMaterials().ToList();
 
             m_textureExporter = new TextureExporter(textureSerializer);
 

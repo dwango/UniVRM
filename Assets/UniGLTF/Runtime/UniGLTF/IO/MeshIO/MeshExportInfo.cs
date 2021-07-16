@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -50,7 +51,7 @@ namespace UniGLTF
             }
         }
 
-        public static bool TryGetSameMeshIndex(List<MeshExportInfo> meshWithRenderers, Mesh mesh, Material[] materials, out int meshIndex)
+        public static bool TryGetSameMeshIndex(IReadOnlyList<MeshExportInfo> meshWithRenderers, Mesh mesh, Material[] materials, out int meshIndex)
         {
             for (var i = 0; i < meshWithRenderers.Count; i++)
             {
@@ -183,7 +184,7 @@ namespace UniGLTF
         public string Summary;
         #endregion
 
-        MeshExportInfo(Renderer renderer, GltfExportSettings settings)
+        public MeshExportInfo(Renderer renderer, GltfExportSettings settings)
         {
             if (renderer == null)
             {
@@ -220,7 +221,7 @@ namespace UniGLTF
             PushRenderer(renderer);
         }
 
-        void PushRenderer(Renderer renderer)
+        public void PushRenderer(Renderer renderer)
         {
             if (renderer is SkinnedMeshRenderer smr)
             {
@@ -261,52 +262,11 @@ namespace UniGLTF
             }
         }
 
-        public static MeshExportInfo Create(GameObject go)
-        {
-            var list = new List<MeshExportInfo>();
-            GetInfo(go.transform.Traverse(), list, new GltfExportSettings());
-            return list[0];
-        }
-
-        /// <summary>
-        /// ヒエラルキーからエクスポートする Mesh の情報を収集する
-        /// </summary>
-        /// <param name="root"></param>
-        /// <param name="list"></param>
-        /// <param name="settings"></param>
-        /// <param name="blendShapeFilter"> blendShape の export を filtering する </param>
-        public static void GetInfo(IEnumerable<Transform> nodes, List<MeshExportInfo> list, GltfExportSettings settings)
-        {
-            list.Clear();
-            foreach (var node in nodes)
-            {
-                var renderer = node.GetComponent<Renderer>();
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                var found = list.FirstOrDefault(x => x.IsSameMeshAndMaterials(renderer));
-                if (found != null)
-                {
-                    found.PushRenderer(renderer);
-                    continue;
-                }
-
-                var info = new MeshExportInfo(renderer, settings);
-                if (info.Mesh != null)
-                {
-                    list.Add(info);
-                }
-            }
-        }
-
         static bool TryGetMeshInfo()
         {
 
             return true;
         }
-
 
         public void CalcMeshSize(
             GameObject root,
@@ -407,6 +367,70 @@ namespace UniGLTF
                 sb.Insert(0, $"{ExportByteSize:#,0} Bytes = ");
             }
             Summary = sb.ToString();
+        }
+    }
+
+    public class MeshExportList : IReadOnlyList<MeshExportInfo>
+    {
+        List<MeshExportInfo> m_list = new List<MeshExportInfo>();
+
+        public int Count => m_list.Count;
+
+        public MeshExportInfo this[int index] => m_list[index];
+
+        public IEnumerator<MeshExportInfo> GetEnumerator()
+        {
+            return m_list.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public IEnumerable<Material> GetUniqueMaterials()
+        {
+            return m_list.SelectMany(x => x.Materials).Where(x => x != null).Distinct();
+        }
+
+        /// <summary>
+        /// ヒエラルキーからエクスポートする Mesh の情報を収集する
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="list"></param>
+        /// <param name="settings"></param>
+        /// <param name="blendShapeFilter"> blendShape の export を filtering する </param>
+        public void GetInfo(IEnumerable<Transform> nodes, GltfExportSettings settings)
+        {
+            m_list.Clear();
+            foreach (var node in nodes)
+            {
+                var renderer = node.GetComponent<Renderer>();
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                var found = m_list.FirstOrDefault(x => x.IsSameMeshAndMaterials(renderer));
+                if (found != null)
+                {
+                    found.PushRenderer(renderer);
+                    continue;
+                }
+
+                var info = new MeshExportInfo(renderer, settings);
+                if (info.Mesh != null)
+                {
+                    m_list.Add(info);
+                }
+            }
+        }
+
+        public static MeshExportInfo Create(GameObject go)
+        {
+            var list = new MeshExportList();
+            list.GetInfo(go.transform.Traverse(), new GltfExportSettings());
+            return list.m_list[0];
         }
     }
 }

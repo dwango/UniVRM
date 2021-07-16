@@ -30,6 +30,12 @@ namespace UniGLTF
             return material;
         }
 
+        public const string COLOR_TEXTURE_PROP = "_MainTex";
+        public const string METALLIC_TEX_PROP = "_MetallicGlossMap";
+        public const string NORMAL_TEX_PROP = "_BumpMap";
+        public const string EMISSION_TEX_PROP = "_EmissionMap";
+        public const string OCCLUSION_TEX_PROP = "_OcclusionMap";
+
         static void Export_Color(Material m, ITextureExporter textureManager, glTFMaterial material)
         {
             if (m.HasProperty("_Color"))
@@ -37,12 +43,12 @@ namespace UniGLTF
                 material.pbrMetallicRoughness.baseColorFactor = m.GetColor("_Color").ToFloat4(ColorSpace.sRGB, ColorSpace.Linear);
             }
 
-            if (m.HasProperty("_MainTex"))
+            if (m.HasProperty(COLOR_TEXTURE_PROP))
             {
                 // Don't export alpha channel if material was OPAQUE
                 var unnecessaryAlpha = string.Equals(material.alphaMode, "OPAQUE", StringComparison.Ordinal);
 
-                var index = textureManager.RegisterExportingAsSRgb(m.GetTexture("_MainTex"), !unnecessaryAlpha);
+                var index = textureManager.RegisterExportingAsSRgb(m.GetTexture(COLOR_TEXTURE_PROP), !unnecessaryAlpha);
                 if (index != -1)
                 {
                     material.pbrMetallicRoughness.baseColorTexture = new glTFMaterialBaseColorTextureInfo()
@@ -67,20 +73,20 @@ namespace UniGLTF
             float smoothness = 1.0f;
 
             var textuerNames = m.GetTexturePropertyNames();
-            if (textuerNames.Contains("_MetallicGlossMap"))
+            if (textuerNames.Contains(METALLIC_TEX_PROP))
             {
                 if (m.HasProperty("_GlossMapScale"))
                 {
                     smoothness = m.GetFloat("_GlossMapScale");
                 }
-                metallicSmoothTexture = m.GetTexture("_MetallicGlossMap");
+                metallicSmoothTexture = m.GetTexture(METALLIC_TEX_PROP);
             }
 
             Texture occlusionTexture = default;
             var occlusionStrength = 1.0f;
-            if (textuerNames.Contains("_OcclusionMap"))
+            if (textuerNames.Contains(OCCLUSION_TEX_PROP))
             {
-                occlusionTexture = m.GetTexture("_OcclusionMap");
+                occlusionTexture = m.GetTexture(OCCLUSION_TEX_PROP);
                 if (occlusionTexture != null && m.HasProperty("_OcclusionStrength"))
                 {
                     occlusionStrength = m.GetFloat("_OcclusionStrength");
@@ -128,9 +134,9 @@ namespace UniGLTF
 
         static void Export_Normal(Material m, ITextureExporter textureExporter, glTFMaterial material)
         {
-            if (m.HasProperty("_BumpMap"))
+            if (m.HasProperty(NORMAL_TEX_PROP))
             {
-                var index = textureExporter.RegisterExportingAsNormal(m.GetTexture("_BumpMap"));
+                var index = textureExporter.RegisterExportingAsNormal(m.GetTexture(NORMAL_TEX_PROP));
                 if (index != -1)
                 {
                     material.normalTexture = new glTFMaterialNormalTextureInfo()
@@ -174,9 +180,9 @@ namespace UniGLTF
                 material.emissiveFactor = color.ToFloat3(ColorSpace.Linear, ColorSpace.Linear);
             }
 
-            if (m.HasProperty("_EmissionMap"))
+            if (m.HasProperty(EMISSION_TEX_PROP))
             {
-                var index = textureExporter.RegisterExportingAsSRgb(m.GetTexture("_EmissionMap"), needsAlpha: false);
+                var index = textureExporter.RegisterExportingAsSRgb(m.GetTexture(EMISSION_TEX_PROP), needsAlpha: false);
                 if (index != -1)
                 {
                     material.emissiveTexture = new glTFMaterialEmissiveTextureInfo()
@@ -191,7 +197,7 @@ namespace UniGLTF
 
         static void Export_MainTextureTransform(Material m, glTFTextureInfo textureInfo)
         {
-            Export_TextureTransform(m, textureInfo, "_MainTex");
+            Export_TextureTransform(m, textureInfo, COLOR_TEXTURE_PROP);
         }
 
         static void Export_TextureTransform(Material m, glTFTextureInfo textureInfo, string propertyName)

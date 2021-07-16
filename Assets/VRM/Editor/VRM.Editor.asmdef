@@ -6,7 +6,8 @@
         "VRMShaders.GLTF.IO.Runtime",
         "VRMShaders.GLTF.IO.Editor",
         "UniGLTF",
-        "UniGLTF.Editor"
+        "UniGLTF.Editor",
+        "VRMShaders.VRM.IO.Runtime"
     ],
     "optionalUnityReferences": [],
     "includePlatforms": [

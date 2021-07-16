@@ -32,14 +32,14 @@ namespace UniGLTF
         /// Messageの発生個所にジャンプするための情報
         /// </summary>
         public Type Type;
-        public UnityEngine.Component Context;
+        public UnityEngine.Object Context;
 
         /// <summary>
         /// DrawGUIから呼び出す。追加のGUIボタンなどを実装する
         /// </summary>
         public Action Extended;
 
-        public static ValidationContext Create<T>(T c) where T : UnityEngine.Component
+        public static ValidationContext Create<T>(T c) where T : UnityEngine.Object
         {
             return new ValidationContext
             {

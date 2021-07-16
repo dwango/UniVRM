@@ -124,14 +124,40 @@ namespace VRM
             m_meshes = null;
         }
 
-        static string GltfMaterialFromUnityShaderName(string shaderName)
+        /// <summary>
+        /// VRM0
+        /// </summary>
+        class VRMMaterialValidator : DefaultMaterialValidator
         {
-            var name = VRMMaterialExporter.VrmMaterialName(shaderName);
-            if (!string.IsNullOrEmpty(name))
+            public override string GetGltfMaterialTypeFromUnityShaderName(string shaderName)
             {
-                return name;
+                var name = VRMMaterialExporter.VrmMaterialName(shaderName);
+                if (!string.IsNullOrEmpty(name))
+                {
+                    return name;
+                }
+                return base.GetGltfMaterialTypeFromUnityShaderName(shaderName);
             }
-            return MeshExportValidator.DefaultGltfMaterialType(shaderName);
+
+            public override IEnumerable<(string propertyName, Texture texture)> EnumerateTextureProperties(Material m)
+            {
+                if (m.shader.name != "VRM/MToon")
+                {
+                    foreach (var x in base.EnumerateTextureProperties(m))
+                    {
+                        yield return x;
+                    }
+                }
+
+                var prop = UniGLTF.ShaderPropExporter.PreShaderPropExporter.GetPropsForSupportedShader(m.shader.name);
+                foreach (var kv in prop.Properties)
+                {
+                    if (kv.ShaderPropertyType == UniGLTF.ShaderPropExporter.ShaderPropertyType.TexEnv)
+                    {
+                        yield return (kv.Key, m.GetTexture(kv.Key));
+                    }
+                }
+            }
         }
 
         protected override IEnumerable<Validator> ValidatorFactory()
@@ -145,7 +171,7 @@ namespace VRM
             }
 
             // Mesh/Renderer のチェック
-            m_meshes.GltfMaterialFromUnityShaderName = GltfMaterialFromUnityShaderName;
+            m_meshes.MaterialValidator = new VRMMaterialValidator();
             yield return m_meshes.Validate;
 
             // Humanoid のチェック

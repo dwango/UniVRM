@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UniGLTF.M17N;
+using UnityEditor;
 using UnityEngine;
 
 namespace UniGLTF
@@ -27,37 +27,24 @@ namespace UniGLTF
             return null;
         }
 
-        public List<MeshExportInfo> Meshes = new List<MeshExportInfo>();
+        public MeshExportList Meshes = new MeshExportList();
 
         public int ExpectedExportByteSize => Meshes.Where(x => x.IsRendererActive).Sum(x => x.ExportByteSize);
 
         public void SetRoot(GameObject ExportRoot, GltfExportSettings settings, IBlendShapeExportFilter blendShapeFilter)
         {
-            if(ExportRoot==null)
+            if (ExportRoot == null)
             {
                 return;
             }
-            MeshExportInfo.GetInfo(ExportRoot.transform.Traverse().Skip(1), Meshes, settings);
-            foreach(var info in Meshes)
+            Meshes.GetInfo(ExportRoot.transform.Traverse().Skip(1), settings);
+            foreach (var info in Meshes)
             {
                 info.CalcMeshSize(ExportRoot, info.Renderers[0].Item1, settings, blendShapeFilter);
             }
         }
 
-        public Func<string, string> GltfMaterialFromUnityShaderName = DefaultGltfMaterialType;
-
-        public static string DefaultGltfMaterialType(string shaderName)
-        {
-            if (shaderName == "Standard")
-            {
-                return "pbr";
-            }
-            if (MaterialExporter.IsUnlit(shaderName))
-            {
-                return "unlit";
-            }
-            return null;
-        }
+        public IMaterialValidator MaterialValidator = new DefaultMaterialValidator();
 
         public enum Messages
         {
@@ -93,20 +80,47 @@ namespace UniGLTF
                 }
             }
 
-            foreach (var m in Meshes.SelectMany(x => x.Materials).Distinct())
+            foreach (var m in Meshes.GetUniqueMaterials())
             {
-                if (m == null)
-                {
-                    continue;
-                }
-                var gltfMaterial = GltfMaterialFromUnityShaderName(m.shader.name);
+                var gltfMaterial = MaterialValidator.GetGltfMaterialTypeFromUnityShaderName(m.shader.name);
                 if (string.IsNullOrEmpty(gltfMaterial))
                 {
                     yield return Validation.Warning($"{m}: unknown shader: {m.shader.name} => export as gltf default");
                 }
-            }
 
-            yield break;
+                var used = new HashSet<Texture>();
+                foreach (var (propName, texture) in MaterialValidator.EnumerateTextureProperties(m))
+                {
+                    if (texture == null)
+                    {
+                        continue;
+                    }
+                    var assetPath = AssetDatabase.GetAssetPath(texture);
+                    if (!string.IsNullOrEmpty(assetPath))
+                    {
+                        if (AssetImporter.GetAtPath(assetPath) is TextureImporter textureImporter)
+                        {
+                            switch (textureImporter.textureType)
+                            {
+                                case TextureImporterType.Default:
+                                case TextureImporterType.NormalMap:
+                                    break;
+
+                                default:
+                                    // EditorTextureSerializer throw Exception
+                                    // エクスポート未実装
+                                    if (used.Add(texture))
+                                    {
+                                        yield return Validation.Error($"{texture}: unknown texture type: {textureImporter.textureType}", ValidationContext.Create(texture));
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
+
+                yield break;
+            }
         }
     }
 }
